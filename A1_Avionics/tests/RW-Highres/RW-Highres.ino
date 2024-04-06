@@ -250,9 +250,11 @@ void loop() {
 
   Serial.println("DataBuffer: ");
   for (int i = 0; i < BUFFER_SIZE; ++i) {
-    Serial.print(dataBuffer[i]);
+    Serial.print(dataBuffer[i]); 
+    Serial.print(" ");
   }
-  Serial.println("");
+
+  Serial.println(" ");
 
   Serial.print("Page address:");
   Serial.println(pageaddr);
