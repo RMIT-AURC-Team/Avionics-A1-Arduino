@@ -85,12 +85,18 @@ void setup() {
       delay(1000);
     }
   }
+  Serial.println("Successfully accessed flash chip.");
+  Serial.println("Erasing chip");
+  SerialFlash.eraseAll();
+  while (!SerialFlash.ready()) {
+    Serial.print(".");
+    delay(1000);
+  }
+  Serial.println("Finished erasing.");
 
   // not sure if we need this. 
   uint8_t id[5];
   SerialFlash.readID(id);
-
-
 
   //accel - we can go through if and delete a lot of these as they are to do with tap sensing
   adxl.powerOn();
@@ -143,15 +149,9 @@ void setup() {
   
 }
   
-  // Flash setupa address
+  // Flash setup address
   uint32_t pageaddr = 0; // Starting page address 
 
-  // Timers for high and low res
-  unsigned long previousHighResolutionMicro = 0;
-  unsigned long previousLowResolutionMicro = 0;
-  const unsigned long highResolutionInterval = 2000; // Interval for high resolution (500Hz) in microseconds (1000000 microseconds / 500Hz)
-  const unsigned long lowResolutionInterval = 20000; // Interval for low resolution (50Hz) in microseconds (1000000 microseconds / 50Hz)
-  
   // Timer for Scync 
   unsigned long previousMicros = 0;
   const unsigned long syncMicros = 249000; // 249ms interval in microseconds
@@ -159,7 +159,8 @@ void setup() {
   // Buffer size for storing sensor data
   const size_t BUFFER_SIZE = 256;  // 256 byte per pages  
   uint8_t dataBuffer[BUFFER_SIZE]; // Buffer to store sensor data
-  uint8_t BufferIndex = 0; 
+  uint8_t readBuffer[BUFFER_SIZE]; // Buffer for reading back from flash
+  uint8_t bufferIndex = 0; 
 
 
 void loop() {
@@ -218,59 +219,65 @@ void loop() {
   uint8_t syncMillis = currentMicro / 1000; // Convert microseconds to milliseconds and truncate
 
   // Create Buffer
-  dataBuffer[BufferIndex++] = 0b01010100; // 01 010100 (ID and length)
-  dataBuffer[BufferIndex++] = syncMillis; 
+  dataBuffer[bufferIndex++] = 0b01010100; // 01 010100 (ID and length)
+  dataBuffer[bufferIndex++] = syncMillis; 
 
-  dataBuffer[BufferIndex++] = (uint8_t)((accel_x >> 8) & 0xFF); // Store the high byte of accel_x
-  dataBuffer[BufferIndex++] = (uint8_t)(accel_x & 0xFF); // Store the low byte of accel_x
-  dataBuffer[BufferIndex++] = (uint8_t)((accel_y >> 8) & 0xFF); // Store the high byte of accel_y
-  dataBuffer[BufferIndex++] = (uint8_t)(accel_y & 0xFF); // Store the low byte of accel_y
-  dataBuffer[BufferIndex++] = (uint8_t)((accel_z >> 8) & 0xFF); // Store the high byte of accel_z
-  dataBuffer[BufferIndex++] = (uint8_t)(accel_z & 0xFF); // Store the low byte of accel_z
+  dataBuffer[bufferIndex++] = (uint8_t)((accel_x >> 8) & 0xFF); // Store the high byte of accel_x
+  dataBuffer[bufferIndex++] = (uint8_t)(accel_x & 0xFF); // Store the low byte of accel_x
+  dataBuffer[bufferIndex++] = (uint8_t)((accel_y >> 8) & 0xFF); // Store the high byte of accel_y
+  dataBuffer[bufferIndex++] = (uint8_t)(accel_y & 0xFF); // Store the low byte of accel_y
+  dataBuffer[bufferIndex++] = (uint8_t)((accel_z >> 8) & 0xFF); // Store the high byte of accel_z
+  dataBuffer[bufferIndex++] = (uint8_t)(accel_z & 0xFF); // Store the low byte of accel_z
 
-  dataBuffer[BufferIndex++] = (uint8_t)((hx >> 8) & 0xFF); // Store the high byte of hx
-  dataBuffer[BufferIndex++] = (uint8_t)(hx & 0xFF); // Store the low byte of hx
-  dataBuffer[BufferIndex++] = (uint8_t)((hy >> 8) & 0xFF); // Store the high byte of hy
-  dataBuffer[BufferIndex++] = (uint8_t)(hy & 0xFF); // Store the low byte of hy
-  dataBuffer[BufferIndex++] = (uint8_t)((hz >> 8) & 0xFF); // Store the high byte of hz
-  dataBuffer[BufferIndex++] = (uint8_t)(hz & 0xFF); // Store the low byte of hz
+  dataBuffer[bufferIndex++] = (uint8_t)((hx >> 8) & 0xFF); // Store the high byte of hx
+  dataBuffer[bufferIndex++] = (uint8_t)(hx & 0xFF); // Store the low byte of hx
+  dataBuffer[bufferIndex++] = (uint8_t)((hy >> 8) & 0xFF); // Store the high byte of hy
+  dataBuffer[bufferIndex++] = (uint8_t)(hy & 0xFF); // Store the low byte of hy
+  dataBuffer[bufferIndex++] = (uint8_t)((hz >> 8) & 0xFF); // Store the high byte of hz
+  dataBuffer[bufferIndex++] = (uint8_t)(hz & 0xFF); // Store the low byte of hz
 
-  dataBuffer[BufferIndex++] = (uint8_t)((magnetometer_x >> 8) & 0xFF); // Store the high byte of magnetometer_x
-  dataBuffer[BufferIndex++] = (uint8_t)(magnetometer_x & 0xFF); // Store the low byte of magnetometer_x
-  dataBuffer[BufferIndex++] = (uint8_t)((magnetometer_y >> 8) & 0xFF); // Store the high byte of magnetometer_y
-  dataBuffer[BufferIndex++] = (uint8_t)(magnetometer_y & 0xFF); // Store the low byte of magnetometer_y
-  dataBuffer[BufferIndex++] = (uint8_t)((magnetometer_z >> 8) & 0xFF); // Store the high byte of magnetometer_z
-  dataBuffer[BufferIndex++] = (uint8_t)(magnetometer_z & 0xFF); // Store the low byte of magnetometer_z
-  dataBuffer[BufferIndex++] = (uint8_t)((magnetometer_t >> 8) & 0xFF); // Store the high byte of magnetometer_t
-  dataBuffer[BufferIndex++] = (uint8_t)(magnetometer_t & 0xFF); // Store the low byte of magnetometer_t
+  dataBuffer[bufferIndex++] = (uint8_t)((magnetometer_x >> 8) & 0xFF); // Store the high byte of magnetometer_x
+  dataBuffer[bufferIndex++] = (uint8_t)(magnetometer_x & 0xFF); // Store the low byte of magnetometer_x
+  dataBuffer[bufferIndex++] = (uint8_t)((magnetometer_y >> 8) & 0xFF); // Store the high byte of magnetometer_y
+  dataBuffer[bufferIndex++] = (uint8_t)(magnetometer_y & 0xFF); // Store the low byte of magnetometer_y
+  dataBuffer[bufferIndex++] = (uint8_t)((magnetometer_z >> 8) & 0xFF); // Store the high byte of magnetometer_z
+  dataBuffer[bufferIndex++] = (uint8_t)(magnetometer_z & 0xFF); // Store the low byte of magnetometer_z
+  dataBuffer[bufferIndex++] = (uint8_t)((magnetometer_t >> 8) & 0xFF); // Store the high byte of magnetometer_t
+  dataBuffer[bufferIndex++] = (uint8_t)(magnetometer_t & 0xFF); // Store the low byte of magnetometer_t
 
-  // Write to flash
-  while (!SerialFlash.ready());
-  SerialFlash.write(pageaddr, dataBuffer, sizeof(dataBuffer));
 
+  // ********************  FLASH WRITE ******************** //
   Serial.println("DataBuffer: ");
   for (int i = 0; i < BUFFER_SIZE; ++i) {
     Serial.print(dataBuffer[i]); 
     Serial.print(" ");
   }
-
   Serial.println(" ");
-
   Serial.print("Page address:");
   Serial.println(pageaddr);
   Serial.print("Size of buffer:");
   Serial.println(sizeof(dataBuffer));
 
-  uint8_t readdata[256]; 
+  // Write to flash
   while (!SerialFlash.ready());
-  SerialFlash.read(pageaddr,readdata, sizeof(readdata)); 
+  SerialFlash.write(pageaddr, dataBuffer, sizeof(dataBuffer));
+
+  // ********************  FLASH READ ******************** //
+  // Read data back in from flash
+  while (!SerialFlash.ready());
+  SerialFlash.read(pageaddr,readBuffer, sizeof(readBuffer)); 
 
   // print to serial
   Serial.println("data read back:");
   for (int i = 0; i < BUFFER_SIZE; ++i) {
-    Serial.print(readdata[i]);
+    Serial.print(readBuffer[i]);
     Serial.print(" ");
   }
+  Serial.println(" ");
+  Serial.print("Page address:");
+  Serial.println(pageaddr);
+  Serial.print("Size of buffer:");
+  Serial.println(sizeof(dataBuffer));
   
   while(1); 
 }
