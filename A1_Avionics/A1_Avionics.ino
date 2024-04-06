@@ -184,7 +184,11 @@ void loop() {
       uint16_t accel_x = (uint16_t)x;
       uint16_t accel_y = (uint16_t)y;
       uint16_t accel_z = (uint16_t)z;
-      
+
+     Serial.println("Accel: ");
+     Serial.println(accel_x);
+     Serial.println(accel_y);
+     Serial.println(accel_z); 
       
       //gyro ---------------------------------------------------------------------------------------
       byte addr;
@@ -198,7 +202,11 @@ void loop() {
       uint16_t hx = (uint16_t)gyro[0];
       uint16_t hy = (uint16_t)gyro[1];
       uint16_t hz = (uint16_t)gyro[2];
-     
+
+     Serial.println("Gyro: ");
+     Serial.println(hx);
+     Serial.println(hy);
+     Serial.println(hz); 
 
       // Magnetometer/compass ------------------------------------------------------------------------
       int16_t mx,my,mz,mt; 
@@ -210,6 +218,12 @@ void loop() {
       uint16_t magnetometer_z = (uint16_t)mz;
       uint16_t magnetometer_t = (uint16_t)mt;
 
+       Serial.println("mag: ");
+       Serial.println(magnetometer_x);
+       Serial.println(magnetometer_y);
+       Serial.println(magnetometer_z); 
+       Serial.println(magnetometer_t);
+      
       // convert currentMicro from mirco to millis
       uint8_t syncMillis = currentMicro / 1000; // Convert microseconds to milliseconds and truncate
       
@@ -252,6 +266,10 @@ void loop() {
     int32_t praw = get_praw(); // get raw pressure data
     int32_t traw = get_traw(); // get raw temperature data 
 
+    Serial.println("Baro: ");
+    Serial.println(praw); 
+    Serial.println(traw);
+    
     // convert currentMicro from mirco to millis
     uint8_t syncMillis = currentMicro / 1000; // Convert microseconds to milliseconds and truncate
     
@@ -268,7 +286,14 @@ void loop() {
     dataBuffer[BufferIndex++] = (uint8_t)(traw & 0xFF); // Store the third byte of traw
 
     // Write to flash
+    while (!SerialFlash.ready());
     SerialFlash.write(pageaddr, dataBuffer, sizeof(dataBuffer));
+
+    Serial.println("DataBuffer: ");
+    for (int i = 0; i < BUFFER_SIZE; ++i) {
+    Serial.print(dataBuffer[i]);
+    Serial.print(" ");
+  }
       
     // increase addr to change page 
     pageaddr += 0x100; 
@@ -278,8 +303,21 @@ void loop() {
 
     // reset low res timer 
     previousLowResolutionMicro = currentMicro;
+
+    
   }
 
+   uint8_t readdata[256]; 
+   SerialFlash.read(pageaddr,readdata, sizeof(readdata)); 
+
+  // print to serial
+  Serial.println("data read back:");
+    for (int i = 0; i < BUFFER_SIZE; ++i) {
+    Serial.print(readdata[i]);
+    Serial.print(" ");
+  }
+  
+    while(1); 
 }
 
 
