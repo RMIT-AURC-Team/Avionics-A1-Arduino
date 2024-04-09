@@ -1,6 +1,4 @@
 #include <SPL06-007.h>  // Baro
-#include <QMC5883L.h>   // Mag
-#include <ADXL345.h>    // Accel
 #include <SerialFlash.h>
 #include <SPI.h>
 #include <Wire.h>
@@ -8,6 +6,8 @@
 
 // Define the chip select
 #define CSPIN 10
+#define TERMINAL_4 4  // Blue Raven takeoff
+#define TERMINAL_M 5  // Blue Raven apogee
 
 double groundpressure;
 
@@ -63,10 +63,10 @@ void loop() {
     previousMicros = currentMicro;
   }
 
-  // High resolution loop (500gz)
+  // High resolution loop (500Hz)
   if (currentMicro - previousHighResolutionMicro >= highResolutionInterval) {
 
-    //accel ---------------------------------------------------------------------------------------
+    // Accel ---------------------------------------------------------------------------------------
     int16_t accel[3];
     readAccel(accel);  //read the accelerometer values and store them in variables  x,y,z
     uint16_t ax = (uint16_t)accel[0];
@@ -77,7 +77,7 @@ void loop() {
     sprintf(str, "Accel: x=%d y=%d z=%d", ax, ay, az);
     Serial.println(str);
 
-    //gyro ---------------------------------------------------------------------------------------
+    // Gyro ---------------------------------------------------------------------------------------
     int16_t gyro[3];
     readGyro(gyro);
     uint16_t gx = (uint16_t)gyro[0];
@@ -130,11 +130,10 @@ void loop() {
     previousHighResolutionMicro = currentMicro;
   }
 
-  // Low resolution loop (50gz)
+  // Low resolution loop (50Hz)
   if (currentMicro - previousLowResolutionMicro >= lowResolutionInterval) {
 
     //Barometer ---------------------------------------------------------------------------------------------------
-
     int32_t baro[2];
     readBaro(baro);
 
@@ -166,7 +165,4 @@ void loop() {
     bufferIndex = 0;
     previousLowResolutionMicro = currentMicro;
   }
-
-  uint8_t readData[256];
-  SerialFlash.read(pageAddr, readData, sizeof(readData));
 }
