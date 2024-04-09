@@ -49,15 +49,17 @@ void loop() {
 
   SerialFlash.read(pageAddr, readBuffer, sizeof(readBuffer)); 
 
-  // Print each byte read into buffer
+  // Read and validate each frame from buffer
+  // Determines if first two bytes read are a valid header and prints out
+  //    payload data according to the frame ID
   for(int i = 0; i < BUFFER_SIZE; i++) { 
 
     uint8_t dfID = ((readBuffer[i] >> 6) & 0x02);
     uint8_t dfLength = (readBuffer[i] & 0x3F);
     uint8_t dfSync = readBuffer[i++];
 
-    bool isValidHighRes = (dfID == 1) && (dfLength == 0x12);
-    bool isValidLowRes = (dfID == 2) && (dfLength == 0x08);
+    bool isValidHighRes = (dfID == 1) && (dfLength == 0x12);  // High res frame header ID=01 LENGTH=20B
+    bool isValidLowRes = (dfID == 2) && (dfLength == 0x08);   // Low res frame header ID=10 LENGTH=8B
 
     if(isValidHighRes) {
       int16_t accelData[3] = {readBuffer[i++], readBuffer[i++], readBuffer[i++]};
@@ -77,6 +79,7 @@ void loop() {
       Serial.println("-------------------------------------------------------------------");
     } else if(isValidLowRes) {
       int32_t baroData[2] = {readBuffer[i++], readBuffer[i++]};
+
       // Print out low res sensor data from frame
       Serial.println(pageAddr, HEX);
       Serial.print("Read low res dataframe, sync: ");
