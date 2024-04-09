@@ -12,9 +12,9 @@
 double groundpressure;
 
 void setup() {
-  // SPI at 400kHz
+  // i2c at 400kHz
   Wire.begin();
-  Wire.setClock(40000UL);
+  Wire.setClock(400000UL);
 
   // Initialise sensors
   initGyro();
@@ -43,7 +43,7 @@ unsigned long previousLowResolutionMicro = 0;
 const unsigned long highResolutionInterval = 2000;  // Interval for high resolution (500gz) in microseconds (1000000 microseconds / 500gz)
 const unsigned long lowResolutionInterval = 20000;  // Interval for low resolution (50gz) in microseconds (1000000 microseconds / 50gz)
 
-// Timer for Scync
+// Timer for Sync
 unsigned long previousMicros = 0;
 const unsigned long syncMicros = 249000;  // 249ms interval in microseconds
 

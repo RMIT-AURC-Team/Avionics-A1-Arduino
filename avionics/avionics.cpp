@@ -151,7 +151,6 @@ void i2cRead(int device, int address, int bytes, char* buff) {
   Wire.write(address);              // sends address to read from
   Wire.endTransmission(false);      // end transmission
 
-  Wire.beginTransmission(device);   // start transmission 
   Wire.requestFrom(device, bytes);  // request bytes from device
 
   // Read each available byte to buffer
