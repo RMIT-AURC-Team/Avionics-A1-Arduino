@@ -12,7 +12,6 @@
 #define TERMINAL_M 5  // Blue Raven apogee
 
 double groundpressure;
-int flagTakeoff = 0;
 
 void setup() {
   // i2c at 400kHz
@@ -54,14 +53,15 @@ void loop() {
   //    payload data according to the frame ID
   for(int i = 0; i < BUFFER_SIZE; i++) { 
 
-    uint8_t dfID = ((readBuffer[i] >> 6) & 0x02);
+    uint8_t dfID = ((readBuffer[i] >> 6) & 0x03);
     uint8_t dfLength = (readBuffer[i] & 0x3F);
-    uint8_t dfSync = readBuffer[i++];
+    uint8_t dfSync = readBuffer[i+1];
 
-    bool isValidHighRes = (dfID == 1) && (dfLength == 0x12);  // High res frame header ID=01 LENGTH=20B
+    bool isValidHighRes = (dfID == 1) && (dfLength == 0x14);  // High res frame header ID=01 LENGTH=20B
     bool isValidLowRes = (dfID == 2) && (dfLength == 0x08);   // Low res frame header ID=10 LENGTH=8B
 
     if(isValidHighRes) {
+      i++;
       int16_t accelData[3] = {readBuffer[i++], readBuffer[i++], readBuffer[i++]};
       int16_t gyroData[3] = {readBuffer[i++], readBuffer[i++], readBuffer[i++]};
       int16_t magnetData[3] = {readBuffer[i++], readBuffer[i++], readBuffer[i++]};
@@ -78,6 +78,7 @@ void loop() {
       Serial.println(str);
       Serial.println("-------------------------------------------------------------------");
     } else if(isValidLowRes) {
+      i++;
       int32_t baroData[2] = {readBuffer[i++], readBuffer[i++]};
 
       // Print out low res sensor data from frame
@@ -90,7 +91,7 @@ void loop() {
     } else {
       continue;
     }
-
   }
+
   pageAddr += 0x100;
 }
