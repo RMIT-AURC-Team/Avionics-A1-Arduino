@@ -36,6 +36,32 @@ void setup() {
   }
 }
 
+// Converts byte array to 32 bit signed integer
+template <typename T> T bytesToInt(uint8_t* bytes, int length) {
+  // Early return if invalid length
+  if(length <= 0)
+    return 0;
+
+  // Return typecast byte if length is 1
+  if(length == 1)
+    return bytes[0];
+
+  // Otherwise shift in each byte and return result
+  T result;
+  for(int i = 0; i < length; i++) 
+    result = (bytes[i] << 8) | bytes[i+1];
+
+  return result;
+}
+
+uint8_t* readFromBuffer(uint8_t* buffer, int* i, int length) {
+  uint8_t data[length];
+  for(int j = 0; j < length; j++) {
+    data[j] = buffer[*i++];
+  }
+  return data;
+}
+
 // Flash setup address
 uint32_t pageAddr = 0;  // Starting page address
 
@@ -62,9 +88,14 @@ void loop() {
 
     if(isValidHighRes) {
       i++;
-      int16_t accelData[3] = {readBuffer[i++], readBuffer[i++], readBuffer[i++]};
-      int16_t gyroData[3] = {readBuffer[i++], readBuffer[i++], readBuffer[i++]};
-      int16_t magnetData[3] = {readBuffer[i++], readBuffer[i++], readBuffer[i++]};
+      uint8_t* accelData = readFromBuffer(readBuffer, &i, 6);
+      uint8_t* gyroData = readFromBuffer(readBuffer, &i, 6);
+      uint8_t* magnetData = readFromBuffer(readBuffer, &i, 6);
+
+      // Convert bytes to 16 bit signed int
+      int16_t accel = bytesToInt<int16_t>(accelData, 6);
+      int16_t gyro = bytesToInt<int16_t>(gyroData, 6);
+      int16_t magnet = bytesToInt<int16_t>(magnetData, 6);
 
       // Print out high res sensor data from frame
       Serial.println(pageAddr, HEX);
@@ -79,13 +110,18 @@ void loop() {
       Serial.println("-------------------------------------------------------------------");
     } else if(isValidLowRes) {
       i++;
-      int32_t baroData[2] = {readBuffer[i++], readBuffer[i++]};
+      uint8_t* pressureData = readFromBuffer(readBuffer, &i, 3);     // First 3 bytes are pressure
+      uint8_t* temperatureData = readFromBuffer(readBuffer, &i, 3);  // Second 3 bytes are temperature
+      
+      // Convert bytes to 32 bit signed int
+      int32_t pressure = bytesToInt<int32_t>(pressureData, 3);
+      int32_t temperature = bytesToInt<int32_t>(temperatureData, 3);
 
       // Print out low res sensor data from frame
       Serial.println(pageAddr, HEX);
       Serial.print("Read low res dataframe, sync: ");
       Serial.println(dfSync);
-      sprintf(str, "Baro: pressure=%d, temp=%d", baroData[0], baroData[1]);
+      sprintf(str, "Baro: pressure=%d, temp=%d", pressure, temperature);
       Serial.println(str);
       Serial.println("-------------------------------------------------------------------");
     } else {
