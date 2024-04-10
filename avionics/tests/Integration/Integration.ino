@@ -41,15 +41,15 @@ void setup() {
 uint32_t pageAddr = 0;  // Starting page address
 
 // Timers for high and low res
-unsigned long previousHighResolutionMicro = 0;
-unsigned long previousLowResolutionMicro = 0;
+unsigned long currentMicro;
+unsigned long previousSync = 0;
+unsigned long previousHighResMicro = 0;
+unsigned long previousLowResMicro = 0;
+
 // const unsigned long highResolutionInterval = 2000;  // Interval for high resolution (500Hz) in microseconds (1000000 microseconds / 500Hz)
 const unsigned long highResolutionInterval = 4000;  // Interval for high resolution (250Hz) in microseconds (1000000 microseconds / 250Hz)
 const unsigned long lowResolutionInterval = 20000;  // Interval for low resolution (50Hz) in microseconds (1000000 microseconds / 50Hz)
-
-// Timer for Sync
-uint8_t sync = 0;  
-const unsigned long syncMicros = 249000;  // 249ms interval in microseconds
+const unsigned long syncInterval = 249000;          // 249ms interval in microseconds
 
 // Buffer size for storing sensor data
 const size_t BUFFER_SIZE = 256;   // 256 byte per pages
@@ -59,17 +59,19 @@ uint8_t bufferIndex = 0;
 void loop() {
 
   // Current time in microseconds
-  unsigned long currentHighResMicro = micros();
+  currentMicro = micros();
+
+  // Check if 249ms has elapsed for sync
+  // Same sync count is shared by high and low res intervals
+  unsigned long sync = currentMicro - previousSync;
+  if (sync >= syncInterval) {
+    // Reset the timer and update timestamp
+    sync = 0;
+    previousSync = currentMicro;
+  }
 
   // High resolution loop (500Hz)
-  if (currentHighResMicro - previousHighResolutionMicro >= highResolutionInterval) {
-
-    // Check if 249ms has elapsed for sync
-    sync = currentHighResMicro - previousHighResolutionMicro;
-    if (sync >= syncMicros) {
-      // Reset the timer
-      sync = 0;
-    }
+  if (currentMicro - previousHighResMicro >= highResolutionInterval) {
 
     // Accel ---------------------------------------------------------------------------------------
     int16_t accel[3];
@@ -132,20 +134,16 @@ void loop() {
     dataBuffer[bufferIndex++] = (uint8_t)(mz & 0xFF);         // Store the low byte of mz
 
     // reset high res timer
-    previousHighResolutionMicro = currentHighResMicro;
+    previousHighResMicro = currentMicro;
   }
 
+  // TODO: determine if this is necessary, potentially just keep
+  //    same timing for both intervals
+  // Update current time
+  // unsigned long currentMicro = micros();
+
   // Low resolution loop (50Hz)
-  unsigned long currentLowResMicro = micros();
-
-  if (currentLowResMicro - previousLowResolutionMicro >= lowResolutionInterval) {
-
-    // Check if 249ms has elapsed for sync
-    sync = currentHighResMicro - previousHighResolutionMicro;
-    if (sync >= syncMicros) {
-      // Reset the timer
-      sync = 0;
-    }
+  if (currentMicro - previousLowResMicro >= lowResolutionInterval) {
 
     //Barometer ---------------------------------------------------------------------------------------------------
     int32_t baro[2];
@@ -156,7 +154,7 @@ void loop() {
     Serial.println(str);
 
     // convert currentMicro from mirco to millis
-    uint8_t syncMillis = sync-previousLowResolutionMicro / 1000;  // Convert microseconds to milliseconds and truncate
+    uint8_t syncMillis = sync / 1000;  // Convert microseconds to milliseconds and truncate
 
     // Shift to 3 bytes and add to Buffer
     dataBuffer[bufferIndex++] = 0b10001000;  // 10 001000 (ID and length)
@@ -181,6 +179,6 @@ void loop() {
 
     pageAddr += 0x100;
     bufferIndex = 0;
-    previousLowResolutionMicro = currentLowResMicro;
+    previousLowResMicro = currentMicro;
   }
 }
