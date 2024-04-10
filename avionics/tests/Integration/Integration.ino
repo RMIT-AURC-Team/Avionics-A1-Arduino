@@ -56,7 +56,19 @@ const size_t BUFFER_SIZE = 256;   // 256 byte per pages
 uint8_t dataBuffer[BUFFER_SIZE];  // Buffer to store sensor data
 uint8_t bufferIndex = 0;
 
+bool isLaunch = false;
+
 void loop() {
+
+  int16_t _accel[3];
+
+  while (!isLaunch) {
+    readAccel(_accel);
+    double _accX = _accel[0] * 0.004;
+    Serial.println(_accX);
+    if (abs(_accX) > 2)
+      isLaunch = true;
+  }
 
   // Current time in microseconds
   currentMicro = micros();
@@ -84,6 +96,13 @@ void loop() {
     sprintf(str, "Accel: x=%d y=%d z=%d", ax, ay, az);
     Serial.println(str);
 
+    double xp = ax * 0.004;
+    double yp = ay * 0.004;
+    double zp = az * 0.004;
+    Serial.println(xp);
+    Serial.println(yp);
+    Serial.println(zp);
+
     // Gyro ---------------------------------------------------------------------------------------
     int16_t gyro[3];
     readGyro(gyro);
@@ -93,6 +112,13 @@ void loop() {
 
     sprintf(str, "Gyro: x=%d y=%d z=%d", gx, gy, gz);
     Serial.println(str);
+
+    xp = gyro[0] / 14.375;
+    yp = gyro[1] / 14.375;
+    zp = gyro[2] / 14.375;
+    Serial.println(xp);
+    Serial.println(yp);
+    Serial.println(zp);
 
     // Magnetometer/compass ------------------------------------------------------------------------
     int16_t magnet[3];
