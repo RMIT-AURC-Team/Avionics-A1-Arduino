@@ -56,22 +56,35 @@ const size_t BUFFER_SIZE = 256;   // 256 byte per pages
 uint8_t dataBuffer[BUFFER_SIZE];  // Buffer to store sensor data
 uint8_t bufferIndex = 0;
 
+// Timeout count in microseconds (for easy conversion with current time)
+unsigned long startTime;
+// const unsigned long timeout = 600000000;
+// For testing
+const unsigned long timeout = 10000000;
+
+int16_t _accel[3];
 bool isLaunch = false;
 
 void loop() {
 
-  int16_t _accel[3];
-
   while (!isLaunch) {
     readAccel(_accel);
-    double _accX = _accel[0] * 0.004;
-    Serial.println(_accX);
-    if (abs(_accX) > 2)
+    double _accelX = _accel[0] * 0.004;
+    Serial.println(_accelX);
+    if (abs(_accelX) > 2) {
       isLaunch = true;
+      // Begin timeout count
+      startTime = micros();
+    }
   }
 
   // Current time in microseconds
   currentMicro = micros();
+
+  // Stop logging data if timeout is reached
+  if (currentMicro - startTime >= timeout)
+    while (1)
+      ;
 
   // Check if 249ms has elapsed for sync
   // Same sync count is shared by high and low res intervals
@@ -166,7 +179,7 @@ void loop() {
   // TODO: determine if this is necessary, potentially just keep
   //    same timing for both intervals
   // Update current time
-  // unsigned long currentMicro = micros();
+  currentMicro = micros();
 
   // Low resolution loop (50Hz)
   if (currentMicro - previousLowResMicro >= lowResolutionInterval) {
@@ -179,7 +192,7 @@ void loop() {
     sprintf(str, "Baro: pressure=%d temp=%d", baro[0], baro[1]);
     Serial.println(str);
 
-    // convert currentMicro from mirco to millis
+    // convert currentMicro from micro to millis
     uint8_t syncMillis = sync / 1000;  // Convert microseconds to milliseconds and truncate
 
     // Shift to 3 bytes and add to Buffer
