@@ -20,6 +20,7 @@ void readGyro(int16_t *x, int16_t *y, int16_t *z);
 
 #define ACCEL (0x53)           // ADXL345 device address
 #define A_TO_READ (6)          // num of bytes we are going to read each time (two bytes for each axis)
+#define A_SENSITIVITY ADXL345_SENSITIVITY_16
 
 #define ADXL345_DEVID 0x00
 #define ADXL345_RESERVED1 0x01
@@ -63,6 +64,10 @@ void readGyro(int16_t *x, int16_t *y, int16_t *z);
 #define ADXL345_BW_12   0x8 // 1000 
 #define ADXL345_BW_6    0x7 // 0111
 #define ADXL345_BW_3    0x6 // 0110
+                            //
+// DATA_FORMAT register bits
+#define ADXL345_DATA_FORMAT_RANGE_16 0x03
+#define ADXL345_SENSITIVITY_16 0.0312
 
 // POWER_CTL register bits
 #define ADXL345_POWER_CTL_LINK 0x20

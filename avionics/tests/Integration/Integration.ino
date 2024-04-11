@@ -67,7 +67,7 @@ void loop() {
 
   while (!isLaunch) {
     readAccel(_accel);
-    double _accelX = _accel[0] * 0.004;
+    double _accelX = _accel[0] * A_SENSITIVITY;
     Serial.println(_accelX);
     if (abs(_accelX) > launchAccel) {
       isLaunch = true;

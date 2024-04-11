@@ -46,6 +46,11 @@ char str[50];
 
 void loop() {
 
+  // Hold at last address
+  if (pageAddr >= 0x1000000)
+    while (1)
+      ;
+
   SerialFlash.read(pageAddr, readBuffer, sizeof(readBuffer));
 
   // Read and validate each frame from buffer
@@ -82,9 +87,9 @@ void loop() {
       Serial.println(dfSync);
       sprintf(str, "Accel: x=%d, y=%d, z=%d", accelX, accelY, accelZ);
       Serial.println(str);
-      Serial.println(accelX * 0.004);
-      Serial.println(accelY * 0.004);
-      Serial.println(accelZ * 0.004);
+      Serial.println(accelX * A_SENSITIVITY);
+      Serial.println(accelY * A_SENSITIVITY);
+      Serial.println(accelZ * A_SENSITIVITY);
       sprintf(str, "Gyro: x=%d, y=%d, z=%d", gyroX, gyroY, gyroZ);
       Serial.println(str);
       Serial.println(gyroX / 14.375);

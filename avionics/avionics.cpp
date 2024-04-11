@@ -55,10 +55,12 @@ void initAccel(){
     // Power control
     i2cWrite(ACCEL, ADXL345_POWER_CTL, 0);  
     i2cWrite(ACCEL, ADXL345_POWER_CTL, ADXL345_POWER_CTL_MEASURE); 
+    i2cWrite(ACCEL, ADXL345_DATA_FORMAT, ADXL345_DATA_FORMAT_RANGE_16);
 
     // Setup interrupts
     // For now, don't use interrupts
     i2cWrite(ACCEL, ADXL345_INT_ENABLE, 0);
+
     /* Alternatively, enable interrupts. Activity may be handy
      * for detecting launch event in absence of Blue Raven. Freefall
      * can be likewise be used for apogee.
