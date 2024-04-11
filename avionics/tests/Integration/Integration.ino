@@ -7,10 +7,6 @@
 // Define the chip select
 #define CSPIN 10
 
-// Define terminal pin connections
-#define TERMINAL_4 4  // Blue Raven takeoff
-#define TERMINAL_M 5  // Blue Raven apogee
-
 double groundpressure;
 int flagTakeoff = 0;
 
@@ -58,12 +54,14 @@ uint8_t bufferIndex = 0;
 
 // Timeout count in microseconds (for easy conversion with current time)
 unsigned long startTime;
+
 // const unsigned long timeout = 600000000;
 // For testing
 const unsigned long timeout = 10000000;
 
 int16_t _accel[3];
 bool isLaunch = false;
+const double launchAccel = 2;
 
 void loop() {
 
@@ -71,7 +69,7 @@ void loop() {
     readAccel(_accel);
     double _accelX = _accel[0] * 0.004;
     Serial.println(_accelX);
-    if (abs(_accelX) > 2) {
+    if (abs(_accelX) > launchAccel) {
       isLaunch = true;
       // Begin timeout count
       startTime = micros();
@@ -176,12 +174,8 @@ void loop() {
     previousHighResMicro = currentMicro;
   }
 
-  // TODO: determine if this is necessary, potentially just keep
-  //    same timing for both intervals
-  // Update current time
-  currentMicro = micros();
-
   // Low resolution loop (50Hz)
+  currentMicro = micros();
   if (currentMicro - previousLowResMicro >= lowResolutionInterval) {
 
     //Barometer ---------------------------------------------------------------------------------------------------
