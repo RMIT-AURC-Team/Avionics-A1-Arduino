@@ -81,13 +81,15 @@ void loop() {
       Serial.print("Read high res dataframe, sync: ");
       Serial.println(dfSync);
       sprintf(str, "Accel: x=%d, y=%d, z=%d", accelX, accelY, accelZ);
+      Serial.println(str);
       Serial.println(accelX * 0.004);
       Serial.println(accelY * 0.004);
       Serial.println(accelZ * 0.004);
-      sprintf(str, "Accel Scaled: x=%d, y=%d, z=%d", accelX, accelY, accelZ);
-      Serial.println(str);
       sprintf(str, "Gyro: x=%d, y=%d, z=%d", gyroX, gyroY, gyroZ);
       Serial.println(str);
+      Serial.println(gyroX / 14.375);
+      Serial.println(gyroY / 14.375);
+      Serial.println(gyroZ / 14.375);
       sprintf(str, "Magnet: x=%d, y=%d, z=%d", magnetX, magnetY, magnetZ);
       Serial.println(str);
       Serial.println("-------------------------------------------------------------------");
