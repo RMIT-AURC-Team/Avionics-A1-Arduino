@@ -87,10 +87,9 @@ void readAccel(int16_t *x, int16_t *y, int16_t *z){
 /******** Magnetometer ********/
 
 void initMagnet(){
-  /* This assumes the wire library has been initialized. */
   uint8_t oversampling = QMC5883L_CONFIG_OS512;
   uint8_t range = QMC5883L_CONFIG_2GAUSS;
-  uint8_t rate = QMC5883L_CONFIG_50HZ;
+  uint8_t rate = QMC5883L_CONFIG_200HZ;
   uint8_t mode = QMC5883L_CONFIG_CONT;
 
   // Reset device and set configuration
