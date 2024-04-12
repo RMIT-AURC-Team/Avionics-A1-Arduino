@@ -11,6 +11,7 @@
 #define G_INT_CFG 0x17
 #define G_PWR_MGM 0x3E
 #define G_TO_READ 8  // 2 bytes for each axis x, y, z
+#define G_SENSITIVITY 14.375
                      
 void initGyro();
 void readGyro(int16_t *data);

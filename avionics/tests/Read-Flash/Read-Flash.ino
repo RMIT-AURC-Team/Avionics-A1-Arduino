@@ -92,9 +92,9 @@ void loop() {
       Serial.println(accelZ * A_SENSITIVITY);
       sprintf(str, "Gyro: x=%d, y=%d, z=%d", gyroX, gyroY, gyroZ);
       Serial.println(str);
-      Serial.println(gyroX / 14.375);
-      Serial.println(gyroY / 14.375);
-      Serial.println(gyroZ / 14.375);
+      Serial.println(gyroX / G_SENSITIVITY);
+      Serial.println(gyroY / G_SENSITIVITY);
+      Serial.println(gyroZ / G_SENSITIVITY);
       sprintf(str, "Magnet: x=%d, y=%d, z=%d", magnetX, magnetY, magnetZ);
       Serial.println(str);
       Serial.println("-------------------------------------------------------------------");
