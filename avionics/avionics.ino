@@ -1,6 +1,4 @@
 #include <SPL06-007.h>  // Baro
-#include <QMC5883L.h>   // Mag
-#include <ADXL345.h>    // Accel
 #include <SerialFlash.h>
 #include <SPI.h>
 #include <Wire.h>
@@ -10,6 +8,7 @@
 #define CSPIN 10
 
 double groundpressure;
+int flagTakeoff = 0;
 
 void setup() {
   // i2c at 400kHz
@@ -23,86 +22,99 @@ void setup() {
   initBarometer();
 
   Serial.begin(115200);          // begin Serial
-  groundpressure = get_pcomp();  // provides initial ground pressure to reference
 
   // Initialise flash
-  if (!SerialFlash.begin(CSPIN)) {
-    while (1) {
-      Serial.println(F("Unable to access SPI Flash chip"));
-      delay(1000);
-    }
-  }
+  if (!SerialFlash.begin(CSPIN))
+    while (1);
 }
 
 // Flash setup address
 uint32_t pageAddr = 0;  // Starting page address
 
 // Timers for high and low res
-unsigned long previousHighResolutionMicro = 0;
-unsigned long previousLowResolutionMicro = 0;
-const unsigned long highResolutionInterval = 2000;  // Interval for high resolution (500gz) in microseconds (1000000 microseconds / 500gz)
-const unsigned long lowResolutionInterval = 20000;  // Interval for low resolution (50gz) in microseconds (1000000 microseconds / 50gz)
+unsigned long currentMicro;
+unsigned long previousSync = 0;
+unsigned long previousHighResMicro = 0;
+unsigned long previousLowResMicro = 0;
 
-// Timer for Sync
-unsigned long previousMicros = 0;
-const unsigned long syncMicros = 249000;  // 249ms interval in microseconds
+// const unsigned long highResolutionInterval = 2000;  // Interval for high resolution (500Hz) in microseconds (1000000 microseconds / 500Hz)
+const unsigned long highResolutionInterval = 4000;  // Interval for high resolution (250Hz) in microseconds (1000000 microseconds / 250Hz)
+const unsigned long lowResolutionInterval = 20000;  // Interval for low resolution (50Hz) in microseconds (1000000 microseconds / 50Hz)
+const unsigned long syncInterval = 249000;          // 249ms interval in microseconds
 
 // Buffer size for storing sensor data
 const size_t BUFFER_SIZE = 256;   // 256 byte per pages
 uint8_t dataBuffer[BUFFER_SIZE];  // Buffer to store sensor data
 uint8_t bufferIndex = 0;
 
+// Timeout count in microseconds (for easy conversion with current time)
+unsigned long startTime;
+const unsigned long timeout = 600000000;  // 10 minute timeout to stop logging
+
+int16_t _accel[3];
+bool isLaunch = false;
+// Launch above 5g reading
+const double launchAccel = 5;
 
 void loop() {
-  // Current time in microseconds
-  unsigned long currentMicro = micros();
 
-  // Check if 249ms has elapsed for sync
-  if (currentMicro - previousMicros >= syncMicros) {
-    // Reset the timer
-    previousMicros = currentMicro;
+  while (!isLaunch) {
+    readAccel(_accel);
+    double _accelX = _accel[0] * A_SENSITIVITY;
+    Serial.println(_accelX);
+    if (abs(_accelX) > launchAccel) {
+      isLaunch = true;
+      // Begin timeout count
+      startTime = micros();
+    }
   }
 
-  // High resolution loop (500gz)
-  if (currentMicro - previousHighResolutionMicro >= highResolutionInterval) {
+  // Current time in microseconds
+  currentMicro = micros();
 
-    //accel ---------------------------------------------------------------------------------------
+  // Stop logging data if timeout is reached
+  if (currentMicro - startTime >= timeout)
+    while (1)
+      ;
+
+  // Check if 249ms has elapsed for sync
+  // Same sync count is shared by high and low res intervals
+  unsigned long sync = currentMicro - previousSync;
+  if (sync >= syncInterval) {
+    // Reset the timer and update timestamp
+    sync = 0;
+    previousSync = currentMicro;
+  }
+
+  // High resolution loop (500Hz)
+  if (currentMicro - previousHighResMicro >= highResolutionInterval) {
+
+    // Accel ---------------------------------------------------------------------------------------
     int16_t accel[3];
     readAccel(accel);  //read the accelerometer values and store them in variables  x,y,z
     uint16_t ax = (uint16_t)accel[0];
     uint16_t ay = (uint16_t)accel[1];
     uint16_t az = (uint16_t)accel[2];
 
-    char str[50];
-    sprintf(str, "Accel: x=%d y=%d z=%d", ax, ay, az);
-    Serial.println(str);
-
-    //gyro ---------------------------------------------------------------------------------------
+    // Gyro ---------------------------------------------------------------------------------------
     int16_t gyro[3];
     readGyro(gyro);
     uint16_t gx = (uint16_t)gyro[0];
     uint16_t gy = (uint16_t)gyro[1];
     uint16_t gz = (uint16_t)gyro[2];
 
-    sprintf(str, "Gyro: x=%d y=%d z=%d", gx, gy, gz);
-    Serial.println(str);
-
     // Magnetometer/compass ------------------------------------------------------------------------
     int16_t magnet[3];
     readMagnet(magnet);
-    // Cast to uint16_t
     uint16_t mx = (uint16_t)magnet[0];
     uint16_t my = (uint16_t)magnet[1];
     uint16_t mz = (uint16_t)magnet[2];
 
-    sprintf(str, "Mag: x=%d y=%d z=%d", mx, my, mz);
-    Serial.println(str);
-
-    // convert currentMicro from mirco to millis
-    uint8_t syncMillis = currentMicro / 1000;  // Convert microseconds to milliseconds and truncate
+    uint8_t syncMillis = sync / 1000;  // Convert microseconds to milliseconds and truncate
 
     // Create Buffer
     dataBuffer[bufferIndex++] = 0b01010100;  // 01 010100 (ID and length)
+
     dataBuffer[bufferIndex++] = syncMillis;
 
     dataBuffer[bufferIndex++] = (uint8_t)((ax >> 8) & 0xFF);  // Store the high byte of ax
@@ -127,23 +139,20 @@ void loop() {
     dataBuffer[bufferIndex++] = (uint8_t)(mz & 0xFF);         // Store the low byte of mz
 
     // reset high res timer
-    previousHighResolutionMicro = currentMicro;
+    previousHighResMicro = currentMicro;
   }
 
-  // Low resolution loop (50gz)
-  if (currentMicro - previousLowResolutionMicro >= lowResolutionInterval) {
+  currentMicro = micros();
+
+  // Low resolution loop (50Hz)
+  if (currentMicro - previousLowResMicro >= lowResolutionInterval) {
 
     //Barometer ---------------------------------------------------------------------------------------------------
-
     int32_t baro[2];
     readBaro(baro);
 
-    char str[50];
-    sprintf(str, "Baro: pressure=%d temp=%d", baro[0], baro[1]);
-    Serial.println(str);
-
-    // convert currentMicro from mirco to millis
-    uint8_t syncMillis = currentMicro / 1000;  // Convert microseconds to milliseconds and truncate
+    // convert currentMicro from micro to millis
+    uint8_t syncMillis = sync / 1000;  // Convert microseconds to milliseconds and truncate
 
     // Shift to 3 bytes and add to Buffer
     dataBuffer[bufferIndex++] = 0b10001000;  // 10 001000 (ID and length)
@@ -158,16 +167,12 @@ void loop() {
     dataBuffer[bufferIndex++] = (uint8_t)(baro[1] & 0xFF);          // Store the third byte of temperature
 
     // Write to flash
-    // while (!SerialFlash.ready());
-    // SerialFlash.write(pageAddr, dataBuffer, sizeof(dataBuffer));
+    while (!SerialFlash.ready())
+      ;
+    SerialFlash.write(pageAddr, dataBuffer, sizeof(dataBuffer));
 
     pageAddr += 0x100;
     bufferIndex = 0;
-    previousLowResolutionMicro = currentMicro;
+    previousLowResMicro = currentMicro;
   }
-
-  //uint8_t readData[256];
-  //SerialFlash.read(pageAddr, readData, sizeof(readData));
-  Serial.println("");
-  delay(5000);
 }

@@ -21,16 +21,12 @@ void setup() {
   initMagnet();
   initBarometer();
 
-  Serial.begin(115200);          // begin Serial
-  groundpressure = get_pcomp();  // provides initial ground pressure to reference
+  Serial.begin(115200);  // begin Serial
 
   // Initialise flash
-  if (!SerialFlash.begin(CSPIN)) {
-    while (1) {
-      Serial.println(F("Unable to access SPI Flash chip"));
-      delay(1000);
-    }
-  }
+  if (!SerialFlash.begin(CSPIN))
+    while (1)
+      ;
 }
 
 // Flash setup address
@@ -54,10 +50,7 @@ uint8_t bufferIndex = 0;
 
 // Timeout count in microseconds (for easy conversion with current time)
 unsigned long startTime;
-
-// const unsigned long timeout = 600000000;
-// For testing
-const unsigned long timeout = 10000000;
+const unsigned long timeout = 10000000;  // 10 minute timeout to stop logging
 
 int16_t _accel[3];
 bool isLaunch = false;
@@ -103,17 +96,6 @@ void loop() {
     uint16_t ay = (uint16_t)accel[1];
     uint16_t az = (uint16_t)accel[2];
 
-    char str[50];
-    sprintf(str, "Accel: x=%d y=%d z=%d", ax, ay, az);
-    Serial.println(str);
-
-    double xp = ax * 0.004;
-    double yp = ay * 0.004;
-    double zp = az * 0.004;
-    Serial.println(xp);
-    Serial.println(yp);
-    Serial.println(zp);
-
     // Gyro ---------------------------------------------------------------------------------------
     int16_t gyro[3];
     readGyro(gyro);
@@ -121,26 +103,12 @@ void loop() {
     uint16_t gy = (uint16_t)gyro[1];
     uint16_t gz = (uint16_t)gyro[2];
 
-    sprintf(str, "Gyro: x=%d y=%d z=%d", gx, gy, gz);
-    Serial.println(str);
-
-    xp = gyro[0] / 14.375;
-    yp = gyro[1] / 14.375;
-    zp = gyro[2] / 14.375;
-    Serial.println(xp);
-    Serial.println(yp);
-    Serial.println(zp);
-
     // Magnetometer/compass ------------------------------------------------------------------------
     int16_t magnet[3];
     readMagnet(magnet);
-    // Cast to uint16_t
     uint16_t mx = (uint16_t)magnet[0];
     uint16_t my = (uint16_t)magnet[1];
     uint16_t mz = (uint16_t)magnet[2];
-
-    sprintf(str, "Mag: x=%d y=%d z=%d", mx, my, mz);
-    Serial.println(str);
 
     uint8_t syncMillis = sync / 1000;  // Convert microseconds to milliseconds and truncate
 
@@ -174,17 +142,14 @@ void loop() {
     previousHighResMicro = currentMicro;
   }
 
-  // Low resolution loop (50Hz)
   currentMicro = micros();
+
+  // Low resolution loop (50Hz)
   if (currentMicro - previousLowResMicro >= lowResolutionInterval) {
 
     //Barometer ---------------------------------------------------------------------------------------------------
     int32_t baro[2];
     readBaro(baro);
-
-    char str[50];
-    sprintf(str, "Baro: pressure=%d temp=%d", baro[0], baro[1]);
-    Serial.println(str);
 
     // convert currentMicro from micro to millis
     uint8_t syncMillis = sync / 1000;  // Convert microseconds to milliseconds and truncate
@@ -202,13 +167,9 @@ void loop() {
     dataBuffer[bufferIndex++] = (uint8_t)(baro[1] & 0xFF);          // Store the third byte of temperature
 
     // Write to flash
-    Serial.println("Waiting for flash...");
     while (!SerialFlash.ready())
       ;
-    Serial.println("Flash ready.");
     SerialFlash.write(pageAddr, dataBuffer, sizeof(dataBuffer));
-    Serial.println("Page successfully written to flash.");
-    Serial.println("");
 
     pageAddr += 0x100;
     bufferIndex = 0;
