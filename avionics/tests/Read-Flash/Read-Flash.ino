@@ -103,9 +103,9 @@ void loop() {
 
       // Convert bytes to 32 bit signed int
       // TODO: add sign bit conversion
-      int32_t pressure = (readBuffer[i] << 16) | (readBuffer[i + 1] << 8) | readBuffer[i + 2];
-      int32_t temperature = (readBuffer[i + 3] << 16) | (readBuffer[i + 4] << 8) | readBuffer[i + 5];
-      i += 9;
+      int32_t pressure = (readBuffer[i + 2] << 16) | (readBuffer[i + 3] << 8) | readBuffer[i + 4];
+      int32_t temperature = (readBuffer[i + 5] << 16) | (readBuffer[i + 6] << 8) | readBuffer[i + 7];
+      i += 7;
 
       // Print out low res sensor data from frame
       Serial.println(pageAddr, HEX);
