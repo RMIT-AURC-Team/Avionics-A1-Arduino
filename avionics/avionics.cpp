@@ -114,7 +114,7 @@ void initBarometer(){
 	i2cWrite(BARO, SPL06_PRS_CFG, SPL06_PRS_RATE_128);	// Pressure single sample
 	i2cWrite(BARO, SPL06_TMP_CFG, SPL06_TMP_RATE_128
 	                            | SPL06_TMP_EXT);	      // Temperature single sample with external temp
-	i2cWrite(BARO, SPL06_MEAS_CFG, 0x00);	              // continuous temp and pressure measurement
+	i2cWrite(BARO, SPL06_MEAS_CFG, 0x07);	              // continuous temp and pressure measurement
 	i2cWrite(BARO, SPL06_CFG_REG, 0x04);	              // FIFO Pressure measurement  
 }
 
